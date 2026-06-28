@@ -1,0 +1,19 @@
+{
+  "name": "ratelimiter",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Token Bucket Rate Limiter Service",
+  "main": "src/server.js",
+  "scripts": {
+    "start":     "node src/server.js",
+    "dev":       "node --watch src/server.js",
+    "load-test": "node scripts/load_test.js"
+  },
+  "dependencies": {
+    "@fastify/cors": "^11.2.0",
+    "autocannon":    "^8.0.0",
+    "fastify":       "^5.9.0",
+    "ioredis":       "^5.11.1",
+    "sql.js":        "^1.14.1"
+  }
+}
