@@ -1,4 +1,13 @@
--- Sliding Window Algorithm (atomic Lua script)
+-- This file removes old requests, counts requests, decides and then adds requests
+-- all in a single script thus maintaining atomicity
+-- For every incoming request this performs
+-- Removes requests older than 1 minute.
+-- Counts requests remaining.
+-- If count < 100 then allow.
+-- Otherwise reject.
+-- Returns when the client can retry.
+
+-- Sliding Window Algorithm 
 -- Uses a sorted set: member = request_id, score = timestamp_ms
 -- KEYS[1] = window key
 -- ARGV[1] = window_ms  (window size in ms, e.g. 1000 for 1s)
@@ -30,7 +39,7 @@ if count < limit then
   allowed = 1
 end
 
--- TTL = window size (auto-expire idle keys)
+-- TTL(time to live) = window size (auto-expire idle keys)
 redis.call('PEXPIRE', key, window_ms + 1000)
 
 -- Reset = oldest entry in window + window_ms

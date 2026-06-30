@@ -1,9 +1,18 @@
+-- This also runs atomically so there is no race condition
+-- For every incoming request this performs the following
+-- Read the current token count.
+-- Calculate the refill.
+-- Decide whether to allow the request.
+-- Write the updated state.
+
+-- Usually one request takes 1 token, expensive requests take more tokens.
+
 -- Token Bucket Algorithm (atomic Lua script)
 -- KEYS[1] = bucket key (e.g. "tb:client123")
 -- ARGV[1] = capacity (max tokens)
 -- ARGV[2] = refill_rate (tokens per second)
 -- ARGV[3] = now_ms (current time in milliseconds)
--- ARGV[4] = requested tokens (usually 1)
+-- ARGV[4] = requested tokens (usually 1) 
 --
 -- Returns: { allowed (0|1), tokens_remaining, reset_ms }
 
