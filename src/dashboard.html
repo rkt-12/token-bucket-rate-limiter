@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rate Limiter Dashboard</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    background: #0d1117;
+    color: #c9d1d9;
+    min-height: 100vh;
+    padding: 24px;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid #21262d;
+    padding-bottom: 16px;
+    margin-bottom: 24px;
+  }
+
+  .dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: #3fb950;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.4; }
+  }
+
+  h1 { font-size: 16px; color: #f0f6fc; font-weight: 600; letter-spacing: 0.04em; }
+  .subtitle { font-size: 11px; color: #6e7681; margin-left: auto; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+  }
+
+  .card {
+    background: #161b22;
+    border: 1px solid #21262d;
+    border-radius: 8px;
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card-key {
+    font-size: 13px;
+    color: #58a6ff;
+    margin-bottom: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .bars {
+    display: flex;
+    gap: 8px;
+    height: 40px;
+    align-items: flex-end;
+    margin-bottom: 10px;
+  }
+
+  .bar-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    height: 100%;
+    justify-content: flex-end;
+  }
+
+  .bar {
+    width: 100%;
+    border-radius: 3px 3px 0 0;
+    transition: height 0.4s ease;
+    min-height: 2px;
+  }
+
+  .bar.allow { background: #3fb950; }
+  .bar.deny  { background: #f85149; }
+
+  .bar-label {
+    font-size: 9px;
+    color: #6e7681;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .stats-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+  }
+
+  .allow-count { color: #3fb950; }
+  .deny-count  { color: #f85149; }
+  .rate-badge  {
+    font-size: 10px;
+    background: #1f2937;
+    border-radius: 4px;
+    padding: 2px 6px;
+    color: #6e7681;
+  }
+
+  .empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 60px;
+    color: #6e7681;
+    font-size: 13px;
+  }
+
+  .refresh-note {
+    text-align: right;
+    font-size: 10px;
+    color: #6e7681;
+    margin-bottom: 12px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="dot"></div>
+  <h1>RATE LIMITER DASHBOARD</h1>
+  <span class="subtitle" id="ts">—</span>
+</header>
+
+<div class="refresh-note">Refreshes every 3s &nbsp;·&nbsp; Last 2 minutes window</div>
+<div class="grid" id="grid"></div>
+
+<script>
+const grid = document.getElementById('grid');
+const ts   = document.getElementById('ts');
+
+// Keep 20 history points per client for sparkline
+const history = {};
+
+async function refresh() {
+  try {
+    const res  = await fetch('/stats');
+    const data = await res.json();
+
+    ts.textContent = new Date().toLocaleTimeString();
+
+    if (!data.length) {
+      grid.innerHTML = '<div class="empty">No clients configured yet.<br>POST /admin/clients to add one.</div>';
+      return;
+    }
+
+    for (const d of data) {
+      if (!history[d.client_key]) history[d.client_key] = [];
+      history[d.client_key].push({ allow: d.allow, deny: d.deny });
+      if (history[d.client_key].length > 20) history[d.client_key].shift();
+    }
+
+    grid.innerHTML = '';
+    for (const d of data) {
+      const hist   = history[d.client_key] || [];
+      const total  = d.allow + d.deny;
+      const pct    = total ? Math.round((d.deny / total) * 100) : 0;
+      const maxVal = Math.max(...hist.map(h => h.allow + h.deny), 1);
+
+      const barsHtml = hist.map(h => {
+        const aH = Math.round((h.allow / maxVal) * 36);
+        const dH = Math.round((h.deny  / maxVal) * 36);
+        return `
+          <div class="bar-wrap">
+            <div class="bar deny"  style="height:${dH}px"></div>
+            <div class="bar allow" style="height:${aH}px"></div>
+          </div>`;
+      }).join('');
+
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <div class="card-key">${d.client_key}</div>
+        <div class="bars">${barsHtml || '<span style="color:#6e7681;font-size:11px">no data yet</span>'}</div>
+        <div class="stats-row">
+          <span class="allow-count">✓ ${d.allow.toLocaleString()} allow</span>
+          <span class="deny-count">✗ ${d.deny.toLocaleString()} deny</span>
+          <span class="rate-badge">${pct}% denied</span>
+        </div>`;
+      grid.appendChild(card);
+    }
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+refresh();
+setInterval(refresh, 3000);
+</script>
+</body>
+</html>
