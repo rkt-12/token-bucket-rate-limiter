@@ -37,7 +37,7 @@ await apiPost(`${BASE}/admin/clients`,
   { client_key: CLIENT_KEY, algorithm: 'token_bucket', capacity: BURST, refill_rate: LIMIT_PER_SEC },
   { 'x-admin-secret': ADMIN }
 );
-console.log('Client configured ✓\n');
+console.log('Client configured\n');
 
 // 2. Run load test
 const result = await new Promise((resolve, reject) => {

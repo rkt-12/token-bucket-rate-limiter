@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { initRedis, warmConfigCache } from './db/redis_client.js';
@@ -42,4 +43,4 @@ async function build() {
 
 const app = await build();
 await app.listen({ port: PORT, host: HOST });
-console.log(`\n🚦 Rate Limiter running on http://${HOST}:${PORT}\n`);
+console.log(`\nRate Limiter running on http://${HOST}:${PORT}\n`);
