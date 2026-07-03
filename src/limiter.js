@@ -16,7 +16,7 @@ export async function checkLimit(clientKey) {
   const cfg    = await getClientConfig(clientKey);
   const nowMs  = Date.now();
 
-  const result;
+  let result;
 
   if (cfg.algorithm === 'sliding_window') {
     // KEYS[1]=window_key  ARGV: window_ms, limit, now_ms, req_id
